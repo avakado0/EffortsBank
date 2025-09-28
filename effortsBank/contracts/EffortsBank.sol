@@ -126,6 +126,8 @@ contract EffortsBank is ERC721Enumerable, Ownable, ReentrancyGuard {
         uint256 completedAt;
         bool concluded;
         uint256 createdAt;
+        string description; 
+
     }
     uint256 public nextEffortId;
     mapping(uint256 => Effort) public efforts;
@@ -135,11 +137,17 @@ contract EffortsBank is ERC721Enumerable, Ownable, ReentrancyGuard {
         _;
     }
 
-    function submitProposal(address proposed, uint256 proposedDurationDays) external payable onlyMember onlyActiveMember {
+    function submitProposal(
+            address proposed, 
+            uint256 proposedDurationDays,
+            string calldata description
+
+            ) external payable onlyMember onlyActiveMember {
         require(msg.sender != proposed, "cannot propose for yourself");
         require(balanceOf(proposed) == 1, "proposed must be a member");
         require(msg.value >= MIN_PROPOSAL_AMOUNT, "min deposit 0.01 ETH");
-
+        require(bytes(description).length > 0, "description required");
+        require(bytes(description).length <= 200, "max 200 chars");
         uint256 proposerId = _getMemberTokenId(msg.sender);
         uint256 proposedId = _getMemberTokenId(proposed);
 
@@ -157,9 +165,64 @@ contract EffortsBank is ERC721Enumerable, Ownable, ReentrancyGuard {
         e.completedAt = 0;
         e.concluded = false;
         e.createdAt = block.timestamp;
+        e.description = description; 
 
-        emit ProposalSubmitted(nextEffortId, msg.sender, proposed, msg.value, proposedDurationDays);
+        emit ProposalSubmitted(nextEffortId, msg.sender, proposed, msg.value, proposedDurationDays, description);
         nextEffortId++;
+    }
+    /// @notice Get all proposals for a given member (by wallet address)
+    function getProposalsFor(address member) external view returns (
+        uint256[] memory ids,
+        address[] memory proposers,
+        uint256[] memory amounts,
+        uint256[] memory durations,
+        string[] memory descriptions,
+        bool[] memory committed,
+        bool[] memory achievementCompleted,
+        bool[] memory concluded,
+        bool[] memory awaitingUpdates,
+        uint256[] memory requestedDurations
+    ) {
+        uint256 memberTokenId = _getMemberTokenId(member);
+
+        // First pass: count proposals
+        uint256 count = 0;
+        for (uint256 i = 0; i < nextEffortId; i++) {
+            if (efforts[i].proposedTokenId == memberTokenId) {
+                count++;
+            }
+        }
+
+        // Prepare return arrays
+        ids = new uint256[](count);
+        proposers = new address[](count);
+        amounts = new uint256[](count);
+        durations = new uint256[](count);
+        descriptions = new string[](count);
+        committed = new bool[](count);
+        achievementCompleted = new bool[](count);
+        concluded = new bool[](count);
+        awaitingUpdates = new bool[](count);
+        requestedDurations = new uint256[](count);
+
+        // Second pass: fill arrays
+        uint256 j = 0;
+        for (uint256 i = 0; i < nextEffortId; i++) {
+            if (efforts[i].proposedTokenId == memberTokenId) {
+                Effort storage e = efforts[i];
+                ids[j] = e.id;
+                proposers[j] = ownerOf(e.proposerTokenId);
+                amounts[j] = e.amount;
+                durations[j] = e.proposedDurationDays;
+                descriptions[j] = e.description;
+                committed[j] = e.committed;
+                achievementCompleted[j] = e.achievementCompleted;
+                concluded[j] = e.concluded;
+                awaitingUpdates[j] = e.awaitingNewDuration;
+                requestedDurations[j] = e.requestedNewDurationDays;
+                j++;
+            }
+        }
     }
 
     function requestDurationUpdate(uint256 effortId, uint256 newDurationDays) external onlyMember {
@@ -302,7 +365,7 @@ contract EffortsBank is ERC721Enumerable, Ownable, ReentrancyGuard {
     event PenaltyAccrued(address indexed member, uint256 penalty);
     event PenaltyPaid(address indexed member, uint256 value);
     event TreasuryToppedUp(address indexed from, uint256 value);
-    event ProposalSubmitted(uint256 indexed id, address indexed proposer, address indexed proposed, uint256 amount, uint256 durationDays);
+    event ProposalSubmitted(uint256 indexed id, address indexed proposer, address indexed proposed, uint256 amount, uint256 durationDays,string description );
     event DurationUpdateRequested(uint256 indexed id, uint256 newDurationDays);
     event DurationUpdateApproved(uint256 indexed id, uint256 newDurationDays);
     event CommitmentAccepted(uint256 indexed id, address indexed proposed, uint256 timestamp);
