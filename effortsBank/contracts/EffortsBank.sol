@@ -208,13 +208,13 @@ contract EffortsBank is ERC721Enumerable, Ownable, ReentrancyGuard {
         // Second pass: fill arrays
         uint256 j = 0;
         for (uint256 i = 0; i < nextEffortId; i++) {
-            if (efforts[i].proposedTokenId == memberTokenId) {
-                Effort storage e = efforts[i];
+            Effort storage e = efforts[i];
+            if (e.proposedTokenId == memberTokenId) {
                 ids[j] = e.id;
                 proposers[j] = ownerOf(e.proposerTokenId);
                 amounts[j] = e.amount;
                 durations[j] = e.proposedDurationDays;
-                descriptions[j] = e.description;
+                descriptions[j] = e.description; 
                 committed[j] = e.committed;
                 achievementCompleted[j] = e.achievementCompleted;
                 concluded[j] = e.concluded;
