@@ -1,0 +1,27 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+bundle/
+
+# Hardhat artifacts and cache
+artifacts/
+cache/
+types/
+
+# Coverage reports
+coverage/
+
+# Env files
+.env
+.env.local
+
+# OS / Editor files
+.DS_Store
+*.log
+.idea/
+.vscode/
+first_project/nft-club/planning/qAndA.txt
+first_project/notes/first testing notes.txt
+first_project/nft-club/planning/preparation prompt.txt
